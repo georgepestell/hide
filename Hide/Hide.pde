@@ -7,8 +7,8 @@ import java.util.AbstractMap.SimpleEntry;
 
 // Configuration 
 
-final int MY_WIDTH = 800;
-final int MY_HEIGHT = 608;
+final int MY_WIDTH = 3200;
+final int MY_HEIGHT = 2432;
 
 int TILE_WIDTH = 32;
 int TILE_HEIGHT = 32;
@@ -16,24 +16,26 @@ int TILE_HEIGHT = 32;
 int TILES_X;
 int TILES_Y;
 
-final int NUM_BLOBS = 0;
-final int NUM_SPAWNERS = 5;
-
-final int spawnSafetyDistance = 10;
+PVector camera_pos;
 
 // Assets
 PImage playerArt;
+PImage rollingArt;
 PImage spacekeyArt;
 PImage wallArt;
 PImage windowArt;
 PImage weaponPlaceholderArt;
 ArrayList<PImage> grassArt;
+PImage floorSpawnerArt;
 
 SoundFile attackSound;
 
 PGraphics floorTexture;
+PGraphics voronoiTexture;
 
 PFont mainFont;
+
+World world;
 
 // UI
 UI ui;
@@ -44,9 +46,6 @@ PImage gradient;
 // Objects
 Player player;
 ArrayList<Blob> blobs;
-ArrayList<Wall> walls;
-
-boolean[][] tilesBlocked;
 
 MeleeWeapon sword;
 
@@ -58,9 +57,6 @@ Drag drag;
 // Contacts
 ContactHelper contactHelper;
 
-// Rendering
-RenderQueue renderQueue;
-
 // Spawn manager
 SpawnManager spawnManager;
 
@@ -68,6 +64,11 @@ PathFinder pathFinder;
 
 boolean gameover = false;
 boolean startNewGame = false;
+
+float minCameraX;
+float minCameraY;
+float maxCameraX;
+float maxCameraY;
 
 // SETUP
 void setup() {
@@ -84,171 +85,30 @@ void setup() {
   TILES_X = (int) (MY_WIDTH / TILE_WIDTH);
   TILES_Y = (int) (MY_HEIGHT / TILE_HEIGHT);
 
-  tilesBlocked = new boolean[TILES_X][TILES_Y];
-
-  // Setup render queue ordered in increasing z value
-  renderQueue = new RenderQueue();
+  // Setup ordered in increasing z value
   fr = new ForceRegistry();
 
   // Create objects
-  player = new Player(width / 2 - TILE_WIDTH / 2, height / 2);
+  // player = new Player(MY_WIDTH / 2, MY_HEIGHT / 2);
+  player = new Player(width/2, height/2);
   player.position.y += player.h / 2;
-  renderQueue.add(player);
+
+  minCameraX = - MY_WIDTH + width;
+  minCameraY = - MY_HEIGHT + height;
+  maxCameraX = 0;
+  maxCameraY = 0;
 
 
-  walls = new ArrayList();
+  float camera_x = constrain(width / 2 - player.position.x, minCameraX, maxCameraX);
+  float camera_y = constrain(height / 2 - player.position.y, minCameraY, maxCameraY);
+  camera_pos = new PVector(camera_x, camera_y);
 
-  walls.add(new Wall(0          , 0           , TILES_X , 2)); // TOP WALL
-  walls.add(new Wall(0          , TILES_Y - 1 , TILES_X , 1)); // BOTTOM WALL
-  walls.add(new Wall(0          , 0           , 1       , TILES_Y)); // LEFT WALL
-  walls.add(new Wall(TILES_X - 1, 0           , 1       , TILES_Y)); // RIGHT WALL
+  blobs = new ArrayList<>();
 
-  // Set wall blocked
-  for (int i = 0; i < TILES_Y; i++) {
-    tilesBlocked[0][i] = true;
-    tilesBlocked[TILES_X - 1][i] = true;
-  } 
-
-  for (int i = 0; i < TILES_X; i++) {
-    tilesBlocked[i][0] = true;
-    tilesBlocked[i][1] = true;
-    tilesBlocked[i][TILES_Y - 1] = true;
-  } 
-
-  // Add inner walls
-  float innerSize = 0.5;
-  float doorSize = 0.3;
-
-  int ulx = (int) ((TILES_X * (1 - innerSize)) / 2);
-  int uly = (int) (((TILES_Y - 1) * (1 - innerSize)) / 2) + 1;
-
-  int innerWidth = (int) (TILES_X * innerSize);
-  int innerHeight = (int) (TILES_Y * innerSize);
-  int innerDoorHeight = (int) (innerHeight * doorSize);
-
-  walls.add(new Wall(ulx, uly, innerWidth, 1));
-  walls.add(new Wall(ulx, uly, 1, innerHeight));
-  walls.add(new Wall(ulx, uly + innerHeight - 1, innerWidth, 1));
-  walls.add(new Wall(ulx + innerWidth - 1, uly, 1, innerDoorHeight));
-  walls.add(new Wall(ulx + innerWidth - 1, uly + innerHeight - innerDoorHeight, 1, innerDoorHeight));
-
-  for (int i = ulx; i < ulx + innerWidth; i++) {
-    tilesBlocked[i][uly] = true;
-    tilesBlocked[i][uly + innerHeight - 1] = true;
-  } 
-
-  int doorMin = uly + innerDoorHeight;
-  int doorMax = uly + innerHeight - innerDoorHeight;
-  for (int i = uly; i < uly + innerHeight; i++) {
-    tilesBlocked[ulx][i] = true;
-
-    if (doorMin > i || i >= doorMax) {
-      tilesBlocked[ulx + innerWidth - 1][i] = true;
-    }
-  }
-
-
-  for (Wall wall : walls) {
-    renderQueue.add(wall);
-  }
-  
   PVector playerTile = player.getTilePosition();
-  blobs = new ArrayList();
-  for (int i = 0; i < NUM_BLOBS; i++) {
-    int x, y;
-
-    PVector distFromPlayer = new PVector(0, 0);
-    do {
-      x = (int) random(1, TILES_X - 1);
-      y = (int) random(2, TILES_Y - 1);
-
-      distFromPlayer = PVector.sub(playerTile, new PVector(x, y));
-
-    } while (tilesBlocked[x][y] || distFromPlayer.mag() < spawnSafetyDistance);
-
-    Blob blob = new Blob(x, y, TILE_WIDTH, TILE_WIDTH);
-    renderQueue.add(blob);
-    blobs.add(blob);
-  }
 
   spawnManager = new SpawnManager(3, 1.15);
-
-  Set<SimpleEntry<Integer, Integer>> spawnerPos = new HashSet<>();
-  for (int i = 0; i < NUM_SPAWNERS; i++) {
-
-
-    int y;
-    int x;
-    int offsetX = 0;
-    int offsetY = 0;
-    boolean valid = true;
-    SimpleEntry<Integer, Integer> pos;
-    do {
-      // Select a random wall 
-      int leftRight = (int) random(0, 2);
-      int ab = (int) random(0, 2);
-      if (leftRight == 1) {
-        y = (int) random(0, TILES_Y);
-        if (ab == 1) {
-          // Left
-          x = 0;
-        } else {
-          // Right
-          x = TILES_X - 1;
-        }
-      } else {
-        x = (int) random(0, TILES_X);
-        if (ab == 1) {
-          // Top
-          y = 1;
-        } else {
-          // Bottom
-          y = TILES_Y - 1;
-        }
-      }
-
-      pos = new SimpleEntry<Integer, Integer>(x, y);
-      if (spawnerPos.contains(pos)) { 
-          valid = false;
-          continue;
-      }
-
-      // Check and fetch the valid spawn position around the spawner
-      valid = false;
-      if (y > 0 && !tilesBlocked[x][y-1]) {
-        offsetY = -1;
-        valid = true;
-        continue;
-      }
-      if (y < TILES_Y - 1 && !tilesBlocked[x][y+1]) {
-        offsetY = 1;
-        valid = true;
-        continue;
-      }
-      if (x > 0 && !tilesBlocked[x-1][y]) {
-        offsetX = -1;
-        valid = true;
-        continue;
-      }
-      if (x < TILES_X - 1 && !tilesBlocked[x+1][y]) {
-        offsetX = 1;
-        valid = true;
-        continue;
-      }
-      
-    } while (!valid);
-
-    spawnerPos.add(pos);
-
-    Spawner spawner = new Spawner(x, y, offsetX, offsetY); // Spawn on the right of tile 1, 3
-    spawnManager.add(spawner);
-    renderQueue.add(spawner);
-  }
-
-
-
-
-
+  
   // Create forces
   drag = new Drag(0.1, 0.1);
   userInput = new UserInput(1);
@@ -256,10 +116,6 @@ void setup() {
   // Register forces 
   fr.add(player, userInput);
   fr.add(player, drag);
-
-  for (Blob blob : blobs) {
-    fr.add(blob, drag);
-  }
 
   // Setup contacts
   contactHelper = new ContactHelper();
@@ -272,7 +128,9 @@ void setup() {
   // renderQueue.add(interactManager);
 
   // Load assets
-  // playerArt = loadImage("assets/spriteSheet.png");
+  playerArt = loadImage("assets/spriteSheet.png");
+  rollingArt = loadImage("assets/rolling.png");
+  floorSpawnerArt = loadImage("assets/grate.png");
 
   grassArt = new ArrayList();
   grassArt.add(loadImage("assets/grass_tile_0.png"));
@@ -295,6 +153,20 @@ void setup() {
 
   generateFloorTexture();
 
+  final int NUM_REGIONS = 20;
+  int[][] regions = new int[TILES_Y][TILES_X];
+  boolean[][] borders = new boolean[TILES_Y][TILES_X];
+  PVector[] centers = new PVector[NUM_REGIONS];
+
+  Voronoi.generate(this, TILES_X, TILES_Y, TILE_WIDTH, TILE_HEIGHT, NUM_REGIONS, centers, regions, borders);
+
+  // voronoiTexture = Voronoi.generateTexture(this, TILES_X, TILES_Y, TILE_WIDTH, TILE_HEIGHT, NUM_REGIONS, regions, borders);
+
+  WorldGenerator wg = new WorldGenerator();
+
+  world = wg.generate(TILES_X, TILES_Y, TILE_WIDTH, TILE_HEIGHT, NUM_REGIONS, centers, regions, borders);
+  world.renderQueue.add(player);
+
   ui = new UI(0, 0);
   RollUI rollUI = new RollUI(TILE_WIDTH, TILE_HEIGHT);
   RoundUI roundUI = new RoundUI(2 * TILE_WIDTH, TILE_HEIGHT);
@@ -307,11 +179,12 @@ void setup() {
   ui.add(healthUI);
   ui.add(weaponManager);
 
-  renderQueue.add(ui);
+  // renderQueue.add(ui);
 
   sword = new MeleeWeapon(weaponArt, attackSound);
 
   weaponManager.setWeapon(sword);
+  world.renderQueue.add(sword);
 
   // Create gradient image - make it larger than the screen
   float gradientScale = 2.0;
@@ -334,6 +207,7 @@ void setup() {
   }
   gradient.updatePixels();
   // printTilesBlocked();
+  spawnManager.nextRound();
 }
 
 void endGame() {
@@ -372,37 +246,29 @@ void draw() {
   pathFinder.updateEnemyWeights(blobs);
   for (Blob blob : blobs) {
     blob.update();
-    renderQueue.remove(blob);
+    world.renderQueue.remove(blob);
   }
 
   spawnManager.update();
   
-  renderQueue.remove(player);
+  world.renderQueue.remove(player);
   fr.updateForces();
 
   // Resolve wall contacts
-  ArrayList<Contact> playerWallContacts = new ArrayList();
-  ArrayList<Contact> blobWallContacts = new ArrayList();
-  for (Wall wall : walls) {
-    Contact contact = contactHelper.detectFloorContact(player, wall);
-    if (contact != null) {
-      playerWallContacts.add(contact);
-    }
-    for (Blob blob : blobs) {
-      contact = contactHelper.detectFloorContact(blob, wall, 1.0);
-      if (contact != null) {
-        blobWallContacts.add(contact);
-      }
-    }
+  Contact playerWallContact = world.getWallContact(player);
+  if (playerWallContact != null) {
+    playerWallContact.resolve();
   }
-  contactHelper.resolveContacts(playerWallContacts);
-  contactHelper.resolveContacts(blobWallContacts);
 
   // Blob on blob / player contacts
   ArrayList<Contact> blobBlobContacts = new ArrayList();
   ArrayList<Contact> blobPlayerContacts = new ArrayList();
   ArrayList<Contact> blobWeaponContacts = new ArrayList();
+  ArrayList<Contact> blobWallContacts = new ArrayList();
   for (int b = 0; b < blobs.size(); b++) {
+    
+    // Get wall contacts
+    blobWallContacts.addAll(world.getWallContacts(blobs.get(0)));
     
     // Check contact with weapon
     Contact wContact = null;
@@ -435,6 +301,7 @@ void draw() {
   }
 
   contactHelper.resolveContacts(blobBlobContacts);
+  contactHelper.resolveContacts(blobWallContacts);
 
   for (Contact bContact : blobWeaponContacts) {
     if (bContact.weapon != null) {
@@ -452,18 +319,34 @@ void draw() {
 
   for (Blob blob : blobs) {
     blob.integrate();
-    renderQueue.add(blob);
+    world.renderQueue.add(blob);
   }
 
-  renderQueue.add(player);
+  world.renderQueue.add(player);
 
 
   // DRAW
+  float camera_x = constrain(width / 2 - player.position.x, minCameraX, maxCameraX);
+  float camera_y = constrain(height / 2 - player.position.y, minCameraY, maxCameraY);
+  camera_pos.set(camera_x, camera_y);
   
-  image(floorTexture, 0, 0);
+  image(floorTexture, camera_pos.x, camera_pos.y, MY_WIDTH, MY_HEIGHT);
 
-  renderQueue.display();
-  sword.display();
+  world.update();
+  world.display();
+  ui.display();
+
+  // Display wall break mode
+  if (spawnManager.wallBreak) {
+     int tileX = constrain((int) ((player.position.x + player.orientation.x * TILE_WIDTH) / TILE_WIDTH), 0, TILES_X - 1);
+     int tileY = constrain((int) ((player.position.y + player.orientation.y * TILE_HEIGHT - 1) / TILE_HEIGHT), 0, TILES_Y - 1);
+     pushMatrix();
+     translate(camera_x, camera_y);
+     translate(tileX * TILE_WIDTH, tileY * TILE_HEIGHT);
+     fill(50, 50, 200, 90);
+     rect(0, 0, TILE_WIDTH, TILE_HEIGHT);
+     popMatrix();
+  }
 
   // Draw the vision blocker around the player
   // TODO: Enable vision limiter after dev
@@ -489,6 +372,7 @@ void draw() {
     textAlign(CENTER, CENTER);
     text("Round " + Integer.toString(spawnManager.getRound()), width/2, height/2);
   }
+
 }
 
 void keyPressed() {
@@ -542,10 +426,21 @@ void keyReleased() {
   if (key == 'r' && gameover) {
     setup();
   }
+
+  if (key == 'x' && spawnManager.wallBreak) {
+    // Calculate the wall pointing at if any
+     int tileX = constrain((int) ((player.position.x + player.orientation.x * TILE_WIDTH) / TILE_WIDTH), 0, TILES_X - 1);
+     int tileY = constrain((int) ((player.position.y + player.orientation.y * TILE_HEIGHT - 1) / TILE_HEIGHT), 0, TILES_Y - 1);
+     if (world.isWall(tileX, tileY)) {
+       world.removeTile(tileX, tileY);
+       spawnManager.nextRound();
+     }
+  }
+
 }
 
 void printTilesBlocked() {
-  println(Arrays.deepToString(tilesBlocked).replace("], ", "]\n").replace("true", "x").replace("false", "o"));
+  println(Arrays.deepToString(world.tilesBlocked).replace("], ", "]\n").replace("true", "x").replace("false", "o"));
 }
 
 void generateFloorTexture() {
@@ -569,4 +464,10 @@ void generateFloorTexture() {
   }
   floorTexture.endDraw();
 
+}
+
+PVector getTile(PVector p) {
+ int tileX = constrain((int) (p.x / TILE_WIDTH), 0, TILES_X - 1);
+ int tileY = constrain((int) ((p.y - 1) / TILE_HEIGHT), 0, TILES_Y - 1);
+ return new PVector(tileX, tileY);
 }

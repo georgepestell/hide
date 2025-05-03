@@ -88,7 +88,7 @@ public final class PathFinder {
     return tiles;
   } 
 
-  boolean canSee(PhysicsObject o1, PhysicsObject o2) {
+  boolean canSee(PhysicsObject o1, PhysicsObject o2, boolean[][] tilesBlocked) {
 
     PVector o1Tile = o1.getTilePosition();
     PVector o2Tile = o2.getTilePosition();
@@ -102,10 +102,6 @@ public final class PathFinder {
     }  
 
     return true;
-
-    
-
-
   }
 
   void setupWeights() {
@@ -132,7 +128,7 @@ Comparator<Node> nodeComparator =
       .thenComparingDouble(Node::getHCost).reversed()
       .thenComparingInt(Node::hashCode);
 
-Queue<PVector> generatePath(PVector start, PVector end) {
+Queue<PVector> generatePath(PVector start, PVector end, boolean[][] tilesBlocked) {
   // Convert PVectors to grid coordinates
   int startX = (int)start.x;
   int startY = (int)start.y;

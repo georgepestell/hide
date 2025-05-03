@@ -1,18 +1,17 @@
 public final class Player extends PhysicsObject implements Killable, Wielder {
 
-  private int currentFrame, offsetX, offsetY, totalFrames, row, sx, sy;
+  private int currentFrame, spriteDirection, offsetX, offsetY, totalFrames, row, sx, sy;
 
   int w;
   int h;
 
-  int scale;
-
   int health;
 
   final int rollCooldown = 1000;
-  final int rollTime = 500;
+  final int rollTime = 550;
   boolean rolling = false;
   int lastRoll = 0;
+  int lastRollFrame = 0;
 
   int lastAnimation = 0;
   float animationPhaseShift = HALF_PI;
@@ -33,6 +32,7 @@ public final class Player extends PhysicsObject implements Killable, Wielder {
     this.offsetX = 0 * w;
     this.offsetY = 0 * h;
     this.totalFrames = 2;
+    this.spriteDirection = 1;
     this.row = 0;
     this.sx = 0;
     this.sy = 0;
@@ -45,6 +45,7 @@ public final class Player extends PhysicsObject implements Killable, Wielder {
 
       if (lastRoll + rollTime < now) {
         rolling = false;
+        currentFrame = 0;
         userInput.setForce(1);
         userInput.update();
       }
@@ -55,28 +56,94 @@ public final class Player extends PhysicsObject implements Killable, Wielder {
       this.invulnerable = false;
     } 
 
+    if (!rolling) {
+      if (userInput.getDirection().mag() >= 1f) {
+
+        offsetX = 9;
+
+        if (frameCount % 16 == 0) {
+          currentFrame++;
+          currentFrame %= totalFrames;
+        }
+
+      } else {
+        offsetX = 0;
+        currentFrame = 0;
+      }
+  }
+
   } 
 
   void display() {
-    // PImage sprite = playerArt.get(sx+offsetX, sy+offsetY, w, h);
-    // sprite.resize(w * scale, h * scale);
-    // image(sprite, x, y, w * scale, h * scale);
-    if (this.invulnerable) {
-      float time = now - lastAnimation;
-      float a = sin(TWO_PI * time * (1 / ((float) damageInvulnerableTime / 2)) + animationPhaseShift) * 255;
-      fill(255, 100, 100, a);
-    } else if (this.rolling) {
-      float time = now - lastAnimation;
-      float a = sin(TWO_PI * time * (1 / (float) rollTime) + animationPhaseShift) * 255;
-      fill(255, 255, 255, a);
+
+    // Update sprite based on velocity and direction
+    
+    // TODO: velocity player sprite
+    
+    PImage sprite;
+    if (!rolling) {     
+      if (orientation.mag() > 0.00001f) {
+      
+        if (abs(orientation.x) < 0.0001f) {
+          offsetY = 42;
+        } else {
+          offsetY = 0;
+        }
+
+        if (orientation.x > 0 && orientation.x > 0.00001f) {
+          // Facing right
+          this.spriteDirection = 1;
+        } else if (orientation.x < -0.00001f) {
+          // Facing left
+          this.spriteDirection = -1;
+        }
+
+        if (orientation.y < 0 && orientation.y < -0.00001f) {
+          offsetY += 21;
+        } 
+      }
+
+      sprite = playerArt.get(sx+offsetX+currentFrame*9, sy+offsetY, 9, 21);
+      
     } else {
-      fill(255);
+      // Render roll animation
+      offsetY = 0;
+      offsetX = 0;
+
+      if (frameCount % 3 == 0 && currentFrame < 10) {
+        currentFrame++;
+      }
+
+      sprite = rollingArt.get(sx+offsetX+currentFrame*9, sy+offsetY, 9, 21);
+    }
+   
+
+    pushMatrix();
+
+    if (this.invulnerable) {
+      sprite.filter(GRAY);
+      float time = now - lastAnimation;
+      float a = sin(TWO_PI * time * (1 / ((float) damageInvulnerableTime / 2)) + animationPhaseShift) * 155 + 100;
+      tint(a, 100, 100);
     }
 
-    stroke(0);
-    rectMode(CENTER);
-    rect(this.position.x, this.position.y - h / 2, w, h);
-    rectMode(CORNER);
+  
+
+    imageMode(CENTER);
+    translate(position.x, position.y - h / 2);
+    scale(this.spriteDirection, 1);
+    image(sprite, 0, 0, w, h);
+    imageMode(CORNER);
+    popMatrix();
+
+    noTint();
+
+
+    // stroke(0);
+    // rectMode(CENTER);
+    // fill(255, 255, 255, 100);
+    // rect(this.position.x, this.position.y - h / 2, w, h);
+    // rectMode(CORNER);
 
   }
 
@@ -109,7 +176,7 @@ public final class Player extends PhysicsObject implements Killable, Wielder {
   ArrayList<PVector> getFloorBoundingBox() {
     ArrayList<PVector> bbox = new ArrayList();
 
-    float bboxHeight = 5;
+    float bboxHeight = h / 2;
     
     PVector ul = position.get();
     ul.y -= bboxHeight;
@@ -148,8 +215,10 @@ public final class Player extends PhysicsObject implements Killable, Wielder {
 
     userInput.setForce(3);
     this.lastRoll = now;
+    this.lastRollFrame = frameCount;
     this.lastAnimation = now;
     this.rolling = true;
+    this.currentFrame = 0;
   }
 
   PVector getWeaponOrigin() {

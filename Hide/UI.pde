@@ -1,4 +1,4 @@
-public final class UI extends Renderable {
+public final class UI {
 
   ArrayList<UIElement> elements;
 
@@ -30,10 +30,6 @@ public final class UI extends Renderable {
     for (UIElement e : elements) {
       e.display();
     }
-  }
-
-  float getZ() {
-    return Float.POSITIVE_INFINITY;
   }
 
 }

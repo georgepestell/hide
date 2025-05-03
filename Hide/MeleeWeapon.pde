@@ -52,6 +52,12 @@ class MeleeWeapon extends Weapon {
     return bbox;
 
   }
+  
+  float getZ() {
+    PVector midPoint = getPointOnEllipse(rotation);
+    float maxY = max(origin.y, midPoint.y);
+    return maxY;
+  }
 
   PVector getPointOnEllipse(float angle) {
     return new PVector(origin.x + (attackRangeWidth / 2) * cos(angle), origin.y + (attackRangeHeight/2) * sin(angle));

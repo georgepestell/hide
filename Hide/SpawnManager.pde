@@ -12,13 +12,15 @@ public final class SpawnManager {
   // Spawn rate in milliseconds
   private final int spawnRate = 2000;
 
-  private ArrayList<Spawner> spawners;
+  private ArrayList<FloorSpawner> spawners;
 
   boolean newRoundText = false;
   int lastNewRound = 0;
 
   // milliseconds to show new round text
   int newRoundTextTime = 2000;
+
+  boolean wallBreak = false;
 
   SpawnManager(int baseEnemies, float growthFactor) {
     this.round = 0;
@@ -30,7 +32,7 @@ public final class SpawnManager {
     this.lastSpawn = 0;
   }
 
-  void add(Spawner spawner) {
+  void add(FloorSpawner spawner) {
     this.spawners.add(spawner);
   } 
 
@@ -41,6 +43,11 @@ public final class SpawnManager {
     this.spawnRemaining = (int)(baseEnemies * (expGrowth + logGrowth) / 2);
     this.lastNewRound = millis();
     this.newRoundText = true;
+    this.wallBreak = false;
+  }
+
+  void endRound() {
+    wallBreak = true;
   }
 
   void update() {
@@ -54,12 +61,12 @@ public final class SpawnManager {
     enemiesRemaining -= deadBlobs.size();
     blobs.removeAll(deadBlobs);
 
-    for (Spawner spawner : spawners) {
+    for (FloorSpawner spawner : spawners) {
       spawner.update();
     }
   
     if (this.spawnRemaining <= 0 && this.enemiesRemaining <= 0) {
-      nextRound();
+      endRound();
     } 
 
 
@@ -83,8 +90,22 @@ public final class SpawnManager {
 
 
     if (this.spawnRemaining > 0) {
-      int spawner = (int) random(0, spawners.size());
-      spawners.get(spawner).spawn();
+
+      // get the closest region to the player
+      PVector pPos = player.position.get();
+
+      FloorSpawner closestSpawner = null;
+      float closestDistance = Float.MAX_VALUE;
+      for (FloorSpawner spawner : spawners) {
+        float d = dist(pPos.x, pPos.y, spawner.x, spawner.y);
+        if (d < closestDistance) {
+          closestDistance = d;
+          closestSpawner = spawner;
+        }
+      }
+
+      closestSpawner.spawn();
+
       this.spawnRemaining--;
       this.enemiesRemaining++;
     }

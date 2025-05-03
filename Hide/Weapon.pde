@@ -1,4 +1,4 @@
-abstract class Weapon { 
+abstract class Weapon extends Renderable { 
 
   PImage icon;
 

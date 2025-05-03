@@ -45,7 +45,7 @@ public final class Blob extends PhysicsObject implements Killable {
 
   Blob(int x, int y, int w, int h) {
     super(0.5);
-    this.position = new PVector(((float) x + 0.5) * TILE_WIDTH, (y + 0.5) * TILE_HEIGHT);
+    this.position = new PVector(x, y);
     this.w = w;
     this.h = h;
     this.health = 2;
@@ -83,7 +83,8 @@ public final class Blob extends PhysicsObject implements Killable {
         }
 
         // Attack if close enough to the player
-        if (jumpEnd + jumpCooldown < now && path != null && path.size() <= attackDistance && pathFinder.canSee(this, player)) {
+        // TODO: tiles blocked
+        if (jumpEnd + jumpCooldown < now && path != null && path.size() <= attackDistance && pathFinder.canSee(this, player, world.tilesBlocked)) {
             jump();
         // Otherwise, hunt the player
         } else {
@@ -115,7 +116,7 @@ public final class Blob extends PhysicsObject implements Killable {
 
   void updatePath() {
     lastUpdate = now;
-    path = pathFinder.generatePath(getTilePosition(), player.getTilePosition());
+    path = pathFinder.generatePath(getTilePosition(), player.getTilePosition(), world.tilesBlocked);
   } 
 
   void disable() {

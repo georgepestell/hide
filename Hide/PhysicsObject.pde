@@ -37,6 +37,19 @@ public abstract class PhysicsObject extends Renderable {
     velocity.add(resultingAcceleration);
     position.add(velocity);
 
+    if (position.x < 0) {
+      position.x = 0;
+    }
+    else if (position.x > MY_WIDTH) {
+      position.x = MY_WIDTH;
+    }
+    if (position.y < 0) {
+      position.y = 0;
+    }
+    else if (position.y > MY_HEIGHT) {
+      position.y = MY_HEIGHT;
+    }
+
     forceAccumulator.x = 0;
     forceAccumulator.y = 0;
 

@@ -58,6 +58,10 @@ public final class UserInput extends ForceGenerator {
     }
   }
 
+  PVector getDirection() {
+    return movementForce.direction;
+  }
+
   void updateForce(PhysicsObject object) {
     movementForce.updateForce(object);
   }

@@ -1,30 +1,23 @@
-public final class Wall extends PhysicsObject {
+public final class FloorTile extends Renderable {
 
-  float depth;
   int w;
   int h;
 
-  Wall(int x, int y, int w, int h) {
-    super(0);
+  PVector position;
+
+  FloorTile(int x, int y, int w, int h) {
     this.position = new PVector(x, y);
     this.w = w;
     this.h = h;
   }
 
   void display() {
-    noStroke();
-    textureWrap(REPEAT);
-    beginShape();
-    texture(wallArt);
-    vertex(position.x, position.y, 0, 0);
-    vertex(position.x + w, position.y, w, 0);
-    vertex(position.x + w, position.y + h, w, h);
-    vertex(position.x, position.y + h, 0, h);
-    endShape();
+    fill(100, 255, 100);
+    rect(position.x, position.y, w, h);
   }
 
   float getZ() {
-    return position.y + h;
+    return Float.NEGATIVE_INFINITY;
   }
 
   ArrayList<PVector> getBoundingBox() {
