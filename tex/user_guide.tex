@@ -1,0 +1,71 @@
+%! TeX Program = lualatex
+\documentclass[12pt, a4paper]{article} 
+
+\usepackage[margin=1in]{geometry}
+
+\setlength{\parskip}{1em}
+\setlength{\parindent}{0em}
+
+\usepackage{fontspec}
+\setmainfont{Atkinson Hyperlegible}
+\setmonofont{JetBrains Mono NerdFont}
+
+\usepackage{hyperref}
+
+\usepackage{titlesec}
+\titlespacing*{\section}{0pt}{0.1ex}{0.1ex}
+\titlespacing*{\subsection}{0pt}{0.1ex}{0.1ex}
+\titlespacing*{\subsubsection}{0pt}{0.ex}{0.1ex}
+
+\usepackage{titling}
+\title{CS4303 P2 - AI}
+\author{200007413}
+
+\usepackage{enumitem}
+\setlist{noitemsep, topsep=0pt,partopsep=0pt}
+
+\begin{document}
+
+\hrule
+{\huge User Guide}
+
+{\Huge \thetitle}
+
+{\Large Student NO: \theauthor}
+
+\vspace{1em}\hrule
+
+\section{Player Controls}
+
+Player movement is controlled through the \texttt{WASD} keys.
+\begin{itemize}
+\item\texttt{w} - up
+\item\texttt{a} - left
+\item\texttt{s} - down 
+\item\texttt{d} - right 
+\end{itemize}
+
+The player can roll, giving them a small period invulnerability whilst rolling.
+\begin{itemize}
+\item\texttt{<space>} - roll
+\end{itemize}
+
+The UI at the top left gives an indication of when rolling is available, as there is a small cooldown in which the player cannot roll again.
+
+The player is given a wooden sword for attacking. A visual indicator will display the hitbox of the weapon's attack. Enemies within this hitbox will be damaged.
+\begin{itemize}
+\item\texttt{k} - attack
+\end{itemize}
+
+\section{Enemy AI}
+
+Enemies damage the player when they hit the player. The player's hit-box is the bottom half, to give the 2.5D illusion. Enemies can be hit by a weapon, and are given 2 health-points. Each piece of damage takes 1 hit-point.
+
+Enemies have three states. When far away from the player, the hunt: following a path towards the player. When within a certain distance, they will jump: a faster movement pointed directly at the player. When enemies are damaged, they are hurt: their appearance will fade, and they will not be able to move. They are still vulnerable to further attack in this state, and can still damage the player.
+
+\section{Rounds}
+
+The game is split into increasingly difficult rounds, which end when all enemies are spawned and killed.
+
+\end{document}
+
