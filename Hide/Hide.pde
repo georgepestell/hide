@@ -1,4 +1,3 @@
-import java.util.TreeSet;
 import java.util.Comparator;
 import java.util.Arrays;
 import java.util.Set;
@@ -23,6 +22,7 @@ final int spawnSafetyDistance = 10;
 
 // Assets
 PImage playerArt;
+PImage rollingArt;
 PImage spacekeyArt;
 PImage wallArt;
 PImage windowArt;
@@ -272,7 +272,8 @@ void setup() {
   // renderQueue.add(interactManager);
 
   // Load assets
-  // playerArt = loadImage("assets/spriteSheet.png");
+  playerArt = loadImage("assets/spriteSheet.png");
+  rollingArt = loadImage("assets/rolling.png");
 
   grassArt = new ArrayList();
   grassArt.add(loadImage("assets/grass_tile_0.png"));
@@ -459,8 +460,9 @@ void draw() {
 
 
   // DRAW
-  
   image(floorTexture, 0, 0);
+  
+  noTint();
 
   renderQueue.display();
   sword.display();
