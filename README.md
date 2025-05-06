@@ -1,4 +1,4 @@
-# Hide (AI)
+# Hide
 
 # Running Instructions
 
